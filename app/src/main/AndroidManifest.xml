@@ -21,6 +21,10 @@
         </activity>
         <activity android:name=".TodoActivity" />
         <activity android:name=".CategoryActivity"></activity>
+        <provider
+            android:authorities="com.igweze.ebi.todos.todosprovider"
+            android:name=".TodosProvider"
+            android:exported="false" />
     </application>
 
 </manifest>

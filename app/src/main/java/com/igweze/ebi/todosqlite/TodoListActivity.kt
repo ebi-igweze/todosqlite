@@ -1,43 +1,47 @@
 package com.igweze.ebi.todosqlite
 
+import android.app.LoaderManager
 import android.content.ContentValues
 import android.content.Intent
-import android.net.Uri
+import android.content.Loader
+import android.content.CursorLoader
+import android.database.Cursor
 import android.os.Bundle
 import android.support.design.widget.Snackbar
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.ArrayAdapter
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 
-class TodoListActivity : AppCompatActivity() {
+class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Cursor> {
 
-    private val itemNames = listOf(
-        "Get theatre tickets",
-        "Order pizza for tonight",
-        "Running session at 19.30",
-        "Call Uncle Sam"
-    )
+    companion object {
+        const val URL_LOADER = 0
+        const val ALL_RECORDS = -1
+    }
+
+    private lateinit var cursor: Cursor
+    private lateinit var todoAdapter: TodosCursorAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
 
-        lvTodos.adapter = ArrayAdapter(this,  R.layout.todo_list_item, R.id.tvNote, itemNames)
-
-        // add click listener for listView
-        lvTodos.setOnItemClickListener { _, _, position, _ ->
-            val intent = Intent(this, TodoActivity::class.java)
-            val content = lvTodos.getItemAtPosition(position)
-            intent.putExtra(TodoActivity.CONTENT_KEY, content.toString())
-            startActivity(intent)
-        }
-
-        getTodosInCategory(1)
+        // initialize loader
+        loaderManager.initLoader(URL_LOADER, null, this)
+//        // add click listener for listView
+//        lvTodos.setOnItemClickListener { _, _, position, _ ->
+//            val intent = Intent(this, TodoActivity::class.java)
+//            val content = lvTodos.getItemAtPosition(position)
+//            intent.putExtra(TodoActivity.CONTENT_KEY, content.toString())
+//            startActivity(intent)
+//        }
+        cursor = getTodosCursor()
+        todoAdapter = TodosCursorAdapter(this, cursor, false)
+        lvTodos.adapter = todoAdapter
 
         fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
@@ -56,9 +60,34 @@ class TodoListActivity : AppCompatActivity() {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
-            R.id.action_settings -> true
+            R.id.action_categories -> {
+                val intent = Intent(this, CategoryActivity::class.java)
+                startActivity(intent)
+                super.onOptionsItemSelected(item)
+            }
+            R.id.action_delete_all_todos -> {
+                deleteTodo(ALL_RECORDS)
+                super.onOptionsItemSelected(item)
+            }
+            R.id.action_create_test_todos -> {
+                createTestTodos()
+                super.onOptionsItemSelected(item)
+            }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun getTodosCursor(): Cursor {
+        val projection = arrayOf(
+                TodoContract.TodosEntry.TABLE_NAME + "." + TodoContract.TodosEntry._ID,
+                TodoContract.TodosEntry.COLUMN_TEXT,
+                TodoContract.TodosEntry.COLUMN_CREATED,
+                TodoContract.TodosEntry.COLUMN_EXPIRED,
+                TodoContract.TodosEntry.COLUMN_DONE,
+                TodoContract.CategoriesEntry.TABLE_NAME + "." +
+                        TodoContract.CategoriesEntry.COLUMN_DESCRIPTION)
+
+        return contentResolver!!.query(TodoContract.TodosEntry.CONTENT_URI, projection, null, null, null)
     }
 
     private fun createCategory() {
@@ -70,63 +99,58 @@ class TodoListActivity : AppCompatActivity() {
         Log.d("MainActivity", "Category added $resultUri")
     }
 
-    private fun createTodo() {
-        val helper = DBHelper(this)
-        val text = "Go to the gym"
-        val categoryId = 1
-        val created = "2018-11-10"
-        val expired = ""
-
-        val data = Todo(id=0, categoryId = categoryId, text = text, created = created, expired = expired)
-        val todoId = helper.readableDatabase.insert(TodoContract.TodosEntry.TABLE_NAME, null, data.contentValues)
-    }
-
-    private fun getTodosInCategory(categoryId: Int) {
-        val helper = DBHelper(this)
-
-        val projection = arrayOf(
-            TodoContract.TodosEntry.COLUMN_TEXT,
-            TodoContract.TodosEntry.COLUMN_CREATED,
-            TodoContract.TodosEntry.COLUMN_EXPIRED,
-            TodoContract.TodosEntry.COLUMN_DONE,
-            TodoContract.TodosEntry.COLUMN_CATEGORY_ID,
-            TodoContract.CategoriesEntry.COLUMN_DESCRIPTION)
-
-        val selection = "${TodoContract.TodosEntry.COLUMN_CATEGORY_ID} = ?"
-        val selectionArgs = arrayOf("$categoryId")
-        val cursor = contentResolver.query(TodoContract.TodosEntry.CONTENT_URI, projection, null, null,null)
-        Log.d("Record Count", (cursor.count.toString()))
-
-        var rowContent = ""
-        while (cursor.moveToNext()) {
-            for (i in 0 until projection.count()) {
-                rowContent += "${cursor.getString(i)} - "
-            }
-            Log.d("Row Content", rowContent)
+    private fun createTestTodos() {
+        for (i in 1 until 20) {
+            val day = if (i < 10) "0$i" else "$i"
+            val date = "2018-03-$day"
+            val data = Todo(
+                id=0, text="Todo Item $i",
+                created = date, expired = "",
+                categoryId = 1, done = false )
+            val uri = contentResolver.insert(TodoContract.TodosEntry.CONTENT_URI, data.contentValues)
+            Log.d("Test Todo Insert", uri.toString())
         }
-        cursor.close()
     }
 
-    private fun updateTodo() {
-        val id = 1
-        val helper = DBHelper(this)
+
+    private fun updateTodo(id: Int, text: String, expired: String) {
         val args = arrayOf("$id")
         val values = ContentValues()
         val whereClause = TodoContract.TodosEntry._ID + " = ?"
         values.put(TodoContract.TodosEntry.COLUMN_TEXT, "Call Mr Bond")
-        val numRows = helper.readableDatabase.update(TodoContract.TodosEntry.TABLE_NAME,
+        val numRows = contentResolver.update(TodoContract.TodosEntry.CONTENT_URI,
                 values, whereClause, args)
         Log.d("Update Rows", numRows.toString())
-        helper.readableDatabase.close()
     }
 
-    private fun deleteTodo() {
-        val id = 1
-        val helper = DBHelper(this)
-        val args = arrayOf("$id")
+    private fun deleteTodo(id: Int) {
+        val args =  if (id == ALL_RECORDS) null else arrayOf("$id")
         val whereClause = TodoContract.TodosEntry._ID + " = ?"
-        val numRows = helper.readableDatabase.delete(TodoContract.TodosEntry.TABLE_NAME,
-                whereClause, args)
+        val numRows = contentResolver.delete(TodoContract.TodosEntry.CONTENT_URI, whereClause, args)
         Log.d("Delete rows", numRows.toString())
     }
+
+    override fun onCreateLoader(id: Int, args: Bundle?): Loader<Cursor> {
+        val projection = arrayOf(
+                TodoContract.TodosEntry.TABLE_NAME + "." + TodoContract.TodosEntry._ID,
+                TodoContract.TodosEntry.COLUMN_TEXT,
+                TodoContract.TodosEntry.COLUMN_CREATED,
+                TodoContract.TodosEntry.COLUMN_EXPIRED,
+                TodoContract.TodosEntry.COLUMN_DONE,
+                TodoContract.CategoriesEntry.TABLE_NAME + "." +
+                        TodoContract.CategoriesEntry.COLUMN_DESCRIPTION)
+
+        return CursorLoader(this,
+                TodoContract.TodosEntry.CONTENT_URI, projection,
+                null, null, null)
+    }
+
+    override fun onLoadFinished(loader: Loader<Cursor>?, data: Cursor?) {
+        todoAdapter.swapCursor(data)
+    }
+
+    override fun onLoaderReset(loader: Loader<Cursor>?) {
+        todoAdapter.swapCursor(null)
+    }
+
 }

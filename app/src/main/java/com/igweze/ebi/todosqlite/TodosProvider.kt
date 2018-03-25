@@ -116,14 +116,7 @@ class TodosProvider: ContentProvider() {
             TODOS -> deleteRecord(uri, null, null, TodosEntry.TABLE_NAME)
             TODOS_ID -> deleteRecord(uri, selection, selectionArgs, TodosEntry.TABLE_NAME)
             CATEGORIES -> deleteRecord(uri, null, null, CategoriesEntry.TABLE_NAME)
-            CATEGORIES_ID -> {
-                val id = ContentUris.parseId(uri)
-                val selection = CategoriesEntry._ID + "=?"
-                val sel = arrayOf(id.toString())
-                return deleteRecord(uri, selection, sel,
-                        CategoriesEntry.TABLE_NAME)
-            }
-
+            CATEGORIES_ID -> deleteRecord(uri, selection, selectionArgs, CategoriesEntry.TABLE_NAME)
             else -> throw IllegalArgumentException("Insert unknown URI: " + uri)
         }
     }

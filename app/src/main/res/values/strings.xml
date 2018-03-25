@@ -2,6 +2,8 @@
     <string name="app_name">TodoSqlite</string>
     <string name="action_settings">Settings</string>
     <string name="action_categories">Categories</string>
+    <string name="action_delete_all_todos">Delete todos</string>
+    <string name="action_create_test_todos">Create test todos</string>
 
     <string-array name="categories_array">
         <item>Home</item>

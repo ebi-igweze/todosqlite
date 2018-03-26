@@ -107,27 +107,27 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
                 id=0, text="Todo Item $i",
                 created = date, expired = "",
                 categoryId = 1, done = false )
-            val uri = contentResolver.insert(TodoContract.TodosEntry.CONTENT_URI, data.contentValues)
-            Log.d("Test Todo Insert", uri.toString())
+            val asyncHandler = TodosQueryHandler(contentResolver)
+            asyncHandler.startInsert(1, null, TodoContract.TodosEntry.CONTENT_URI, data.contentValues)
         }
     }
-
 
     private fun updateTodo(id: Int, text: String, expired: String) {
         val args = arrayOf("$id")
         val values = ContentValues()
         val whereClause = TodoContract.TodosEntry._ID + " = ?"
         values.put(TodoContract.TodosEntry.COLUMN_TEXT, "Call Mr Bond")
-        val numRows = contentResolver.update(TodoContract.TodosEntry.CONTENT_URI,
-                values, whereClause, args)
-        Log.d("Update Rows", numRows.toString())
+        val asyncQueryHandler = TodosQueryHandler(contentResolver)
+        asyncQueryHandler.startUpdate(3, null,
+                TodoContract.TodosEntry.CONTENT_URI, values, whereClause, args)
     }
 
     private fun deleteTodo(id: Int) {
         val args =  if (id == ALL_RECORDS) null else arrayOf("$id")
         val whereClause = TodoContract.TodosEntry._ID + " = ?"
-        val numRows = contentResolver.delete(TodoContract.TodosEntry.CONTENT_URI, whereClause, args)
-        Log.d("Delete rows", numRows.toString())
+        val asyncQueryHandler = TodosQueryHandler(contentResolver)
+        asyncQueryHandler.startDelete(2, null,
+                TodoContract.TodosEntry.CONTENT_URI, whereClause, args)
     }
 
     override fun onCreateLoader(id: Int, args: Bundle?): Loader<Cursor> {

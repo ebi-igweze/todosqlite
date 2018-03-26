@@ -19,8 +19,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".TodoActivity" />
-        <activity android:name=".CategoryActivity"></activity>
+        <activity android:name=".TodoActivity"
+            android:parentActivityName="com.igweze.ebi.todosqlite.TodoListActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.igweze.ebi.todosqlite.TodoListActivity" />
+        </activity>
+        <activity android:name=".CategoryActivity"
+            android:parentActivityName="com.igweze.ebi.todosqlite.TodoListActivity" >
+            <!-- Parent activity meta-data to support 4.0 and lower -->
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.igweze.ebi.todosqlite.TodoListActivity" />
+        </activity>
         <provider
             android:authorities="com.igweze.ebi.todos.todosprovider"
             android:name=".TodosProvider"

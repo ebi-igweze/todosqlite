@@ -12,6 +12,7 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.AdapterView
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 
@@ -22,7 +23,6 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
         const val ALL_RECORDS = -1
     }
 
-    private lateinit var cursor: Cursor
     private lateinit var todoAdapter: TodosCursorAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,17 +31,25 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
         setSupportActionBar(toolbar)
 
         // initialize loader
-        loaderManager.initLoader(URL_LOADER, null, this)
-//        // add click listener for listView
-//        lvTodos.setOnItemClickListener { _, _, position, _ ->
-//            val intent = Intent(this, TodoActivity::class.java)
-//            val content = lvTodos.getItemAtPosition(position)
-//            intent.putExtra(TodoActivity.CONTENT_KEY, content.toString())
-//            startActivity(intent)
-//        }
-        cursor = getTodosCursor()
-        todoAdapter = TodosCursorAdapter(this, cursor, false)
+        loaderManager.initLoader(URL_LOADER, savedInstanceState, this)
+        todoAdapter = TodosCursorAdapter(this, null, false)
         lvTodos.adapter = todoAdapter
+
+        // add click listener for list items
+        lvTodos.setOnItemClickListener { adapterView, _, position, _ ->
+            val intent = Intent(this, TodoActivity::class.java)
+            val row = adapterView.getItemAtPosition(position) as Cursor
+            val todo = TodoModel(
+                id = row.getInt(row.getColumnIndex(TodoContract.TodosEntry._ID)),
+                text = row.getString(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_TEXT)),
+                done = row.getInt(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_DONE)) == 1,
+                expired = row.getString(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_EXPIRED)),
+                created = row.getString(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_CREATED)),
+                category = row.getString(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_CATEGORY_ID))
+            )
+            intent.putExtra(TodoActivity.CONTENT_KEY, todo)
+            startActivity(intent)
+        }
 
         fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
@@ -77,19 +85,6 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
         }
     }
 
-    private fun getTodosCursor(): Cursor {
-        val projection = arrayOf(
-                TodoContract.TodosEntry.TABLE_NAME + "." + TodoContract.TodosEntry._ID,
-                TodoContract.TodosEntry.COLUMN_TEXT,
-                TodoContract.TodosEntry.COLUMN_CREATED,
-                TodoContract.TodosEntry.COLUMN_EXPIRED,
-                TodoContract.TodosEntry.COLUMN_DONE,
-                TodoContract.CategoriesEntry.TABLE_NAME + "." +
-                        TodoContract.CategoriesEntry.COLUMN_DESCRIPTION)
-
-        return contentResolver!!.query(TodoContract.TodosEntry.CONTENT_URI, projection, null, null, null)
-    }
-
     private fun createCategory() {
         val category = Category(0, "Work")
         val uri = TodoContract.CategoriesEntry.CONTENT_URI
@@ -103,10 +98,12 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
         for (i in 1 until 20) {
             val day = if (i < 10) "0$i" else "$i"
             val date = "2018-03-$day"
+            val expired = "2018-04-$day"
+            val done = (i%2) == 0
             val data = Todo(
                 id=0, text="Todo Item $i",
-                created = date, expired = "",
-                categoryId = 1, done = false )
+                created = date, expired = expired,
+                categoryId = 1, done = done )
             val asyncHandler = TodosQueryHandler(contentResolver)
             asyncHandler.startInsert(1, null, TodoContract.TodosEntry.CONTENT_URI, data.contentValues)
         }
@@ -137,6 +134,7 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
                 TodoContract.TodosEntry.COLUMN_CREATED,
                 TodoContract.TodosEntry.COLUMN_EXPIRED,
                 TodoContract.TodosEntry.COLUMN_DONE,
+                TodoContract.TodosEntry.COLUMN_CATEGORY_ID,
                 TodoContract.CategoriesEntry.TABLE_NAME + "." +
                         TodoContract.CategoriesEntry.COLUMN_DESCRIPTION)
 

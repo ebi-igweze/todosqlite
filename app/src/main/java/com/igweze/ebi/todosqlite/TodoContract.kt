@@ -12,10 +12,9 @@ class TodoContract {
         val BASE_CONTENT_URI: Uri? = Uri.parse("content://$CONTENT_AUTHORITY")
     }
 
-
     class TodosEntry: BaseColumns {
         companion object {
-            val CONTENT_URI = Uri.withAppendedPath(BASE_CONTENT_URI, PATH_TODOS)
+            val CONTENT_URI: Uri = Uri.withAppendedPath(BASE_CONTENT_URI, PATH_TODOS)
             const val TABLE_NAME = "todo"
             const val _ID = BaseColumns._ID
             const val COLUMN_TEXT = "text"

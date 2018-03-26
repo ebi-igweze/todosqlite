@@ -5,6 +5,7 @@
     <string name="action_delete_all_todos">Delete todos</string>
     <string name="action_create_test_todos">Create test todos</string>
     <string name="dummy_text">Dummy Text</string>
+    <string name="done">Done</string>
 
     <string-array name="categories_array">
         <item>Home</item>

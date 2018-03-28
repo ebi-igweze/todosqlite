@@ -12,6 +12,7 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.AdapterView
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
@@ -21,17 +22,23 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
     companion object {
         const val URL_LOADER = 0
         const val ALL_RECORDS = -1
+        const val ALL_CATEGORIES = -1
     }
 
     private lateinit var todoAdapter: TodosCursorAdapter
+    private val categoryList = CategoryListModel()
+    private var categoryListAdapter: CategoryListAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
 
+        // set the categoryList
+        setCategories()
         // initialize loader
         loaderManager.initLoader(URL_LOADER, savedInstanceState, this)
+
         todoAdapter = TodosCursorAdapter(this, null, false)
         lvTodos.adapter = todoAdapter
 
@@ -45,15 +52,33 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
                 done = row.getInt(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_DONE)) == 1,
                 expired = row.getString(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_EXPIRED)),
                 created = row.getString(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_CREATED)),
-                category = row.getString(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_CATEGORY_ID))
+                category = row.getInt(row.getColumnIndex(TodoContract.TodosEntry.COLUMN_CATEGORY_ID))
             )
             intent.putExtra(TodoActivity.CONTENT_KEY, todo)
+            intent.putExtra(TodoActivity.CATEGORIES_KEY, categoryList)
             startActivity(intent)
         }
 
-        fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
+        spinnerCategories.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                Log.d("Categories Spinner", "Noting selected")
+            }
+
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                loaderManager.restartLoader(URL_LOADER, null, this@TodoListActivity)
+            }
+        }
+
+        fab.setOnClickListener { _ ->
+            val todo = TodoModel(
+                id = 0,  category = 1,
+                done = false, created = "2018-05-05",
+                expired = "2018-06-06", text = ""
+            )
+            val intent = Intent(this, TodoActivity::class.java)
+            intent.putExtra(TodoActivity.CONTENT_KEY, todo)
+            intent.putExtra(TodoActivity.CATEGORIES_KEY, categoryList)
+            startActivity(intent)
         }
     }
 
@@ -74,7 +99,7 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
                 super.onOptionsItemSelected(item)
             }
             R.id.action_delete_all_todos -> {
-                deleteTodo(ALL_RECORDS)
+                deleteTodos(ALL_RECORDS)
                 super.onOptionsItemSelected(item)
             }
             R.id.action_create_test_todos -> {
@@ -85,46 +110,56 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
         }
     }
 
-    private fun createCategory() {
-        val category = Category(0, "Work")
-        val uri = TodoContract.CategoriesEntry.CONTENT_URI
-        // contentResolver provides access to app content model,
-        // in turn giving access to the app providers
-        val resultUri = contentResolver.insert(uri,category.contentValues)
-        Log.d("MainActivity", "Category added $resultUri")
-    }
-
     private fun createTestTodos() {
-        for (i in 1 until 20) {
-            val day = if (i < 10) "0$i" else "$i"
-            val date = "2018-03-$day"
-            val expired = "2018-04-$day"
-            val done = (i%2) == 0
-            val data = Todo(
-                id=0, text="Todo Item $i",
-                created = date, expired = expired,
-                categoryId = 1, done = done )
-            val asyncHandler = TodosQueryHandler(contentResolver)
-            asyncHandler.startInsert(1, null, TodoContract.TodosEntry.CONTENT_URI, data.contentValues)
+        categoryList.categories.forEach {
+            for (i in 1 until 5) {
+                val day = if (i < 10) "0$i" else "$i"
+                val date = "2018-03-$day"
+                val expired = "2018-04-$day"
+                val done = (i%2) == 0
+                val data = Todo(
+                    id=0, text="Todo Item ${it.description.get()} #$i",
+                    created = date, expired = expired,
+                    categoryId = it.id.get(), done = done )
+                val asyncHandler = TodosQueryHandler(contentResolver)
+                asyncHandler.startInsert(1, null, TodoContract.TodosEntry.CONTENT_URI, data.contentValues)
+            }
         }
     }
 
-    private fun updateTodo(id: Int, text: String, expired: String) {
-        val args = arrayOf("$id")
-        val values = ContentValues()
-        val whereClause = TodoContract.TodosEntry._ID + " = ?"
-        values.put(TodoContract.TodosEntry.COLUMN_TEXT, "Call Mr Bond")
-        val asyncQueryHandler = TodosQueryHandler(contentResolver)
-        asyncQueryHandler.startUpdate(3, null,
-                TodoContract.TodosEntry.CONTENT_URI, values, whereClause, args)
-    }
-
-    private fun deleteTodo(id: Int) {
+    private fun deleteTodos(id: Int) {
         val args =  if (id == ALL_RECORDS) null else arrayOf("$id")
         val whereClause = TodoContract.TodosEntry._ID + " = ?"
         val asyncQueryHandler = TodosQueryHandler(contentResolver)
         asyncQueryHandler.startDelete(2, null,
                 TodoContract.TodosEntry.CONTENT_URI, whereClause, args)
+    }
+
+    private fun setCategories() {
+        val queryHandler = object : TodosQueryHandler(contentResolver) {
+            override fun onQueryComplete(token: Int, cookie: Any?,
+                                         cursor: Cursor?) {
+                try {
+                    if (cursor != null) {
+                        var i = 0
+                        categoryList.categories.add(i, CategoryModel(ALL_CATEGORIES, "All Categories"))
+                        i++
+                        while (cursor.moveToNext()) {
+                            categoryList.categories.add(i, CategoryModel(
+                                    cursor.getInt(0),
+                                    cursor.getString(1)
+                            ))
+                            i++
+                        }
+                    }
+                } finally {
+                    //cm = null;
+                }
+            }
+        }
+
+        queryHandler.startQuery(1, null, TodoContract.CategoriesEntry.CONTENT_URI,
+                null, null, null, TodoContract.CategoriesEntry.COLUMN_DESCRIPTION)
     }
 
     override fun onCreateLoader(id: Int, args: Bundle?): Loader<Cursor> {
@@ -138,13 +173,21 @@ class TodoListActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<Curs
                 TodoContract.CategoriesEntry.TABLE_NAME + "." +
                         TodoContract.CategoriesEntry.COLUMN_DESCRIPTION)
 
+        var selection =
+                if (spinnerCategories.selectedItemId < 0) null
+                else TodoContract.TodosEntry.COLUMN_CATEGORY_ID + "=${spinnerCategories.selectedItemId}"
         return CursorLoader(this,
                 TodoContract.TodosEntry.CONTENT_URI, projection,
-                null, null, null)
+                selection, null, null)
     }
 
     override fun onLoadFinished(loader: Loader<Cursor>?, data: Cursor?) {
         todoAdapter.swapCursor(data)
+
+        if (categoryListAdapter == null){
+            categoryListAdapter = CategoryListAdapter(categoryList.categories)
+            spinnerCategories.adapter = categoryListAdapter
+        }
     }
 
     override fun onLoaderReset(loader: Loader<Cursor>?) {

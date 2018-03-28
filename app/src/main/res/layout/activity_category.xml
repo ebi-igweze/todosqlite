@@ -1,21 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:paddingBottom="@dimen/activity_vertical_margin"
-    android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="com.igweze.ebi.todosqlite.CategoryActivity">
-
-    <ListView
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:bind="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+    <data>
+        <variable name="categoryList" type="com.igweze.ebi.todosqlite.CategoryListModel" />
+        <variable name="category" type="com.igweze.ebi.todosqlite.CategoryModel" />
+    </data>
+    <LinearLayout android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/lvCategories"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:entries="@array/categories_array"
-        tools:listitem="@layout/category_list_item"
-        />
-</RelativeLayout>
+        android:layout_height="match_parent">
+
+        <EditText
+            android:id="@+id/tvCategory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/insert_new_category"
+            android:text="@={category.description}"
+            android:tag="@{category.id}"
+            />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button
+                android:id="@+id/btnAdd"
+                style="@android:style/Widget.Button"
+                android:layout_width="@dimen/btnSize"
+                android:layout_height="@dimen/btnSize"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentTop="true"
+                android:drawableTop="@drawable/tag_text_outline"
+                android:text="@string/newCategory" />
+
+            <Button
+                android:id="@+id/btnSave"
+                style="@android:style/Widget.Button"
+                android:layout_width="@dimen/btnSize"
+                android:layout_height="@dimen/btnSize"
+                android:layout_alignParentTop="true"
+                android:layout_centerHorizontal="true"
+                android:layout_gravity="center_horizontal"
+                android:drawableTop="@android:drawable/ic_menu_save"
+                android:text="@string/save_category" />
+
+
+            <Button
+                android:id="@+id/btnDelete"
+                style="@android:style/Widget.Button"
+                android:layout_width="@dimen/btnSize"
+                android:layout_height="@dimen/btnSize"
+                android:layout_alignParentEnd="true"
+                android:layout_alignParentTop="true"
+                android:layout_gravity="end"
+                android:drawableTop="@android:drawable/ic_menu_delete"
+                android:text="@string/delete_category" />
+
+        </RelativeLayout>
+        <ListView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/lvCategories"
+            tools:listitem="@layout/category_list_item"
+            bind:items="@{categoryList.categories}"
+            />
+    </LinearLayout>
+</layout>

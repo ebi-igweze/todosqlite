@@ -19,14 +19,14 @@ class CategoryModel(i: Int = 0, d: String = ""): Serializable {
 }
 
 class TodoModel(id:Int, text: String, done: Boolean, created: String,
-                expired: String, category: String) : Serializable {
+                expired: String, category: Int) : Serializable {
 
     val id = ObservableInt()
     val text = ObservableField<String>()
     val done = ObservableBoolean()
     val created = ObservableField<String>()
     val expired = ObservableField<String>()
-    val category = ObservableField<String>()
+    val categoryId = ObservableInt()
 
     init {
         this.id.set(id)
@@ -34,7 +34,7 @@ class TodoModel(id:Int, text: String, done: Boolean, created: String,
         this.done.set(done)
         this.created.set(created)
         this.expired.set(expired)
-        this.category.set(category)
+        this.categoryId.set(category)
     }
 }
 
